@@ -2,10 +2,11 @@ package dca
 
 import (
 	"errors"
-	"github.com/bwmarrin/discordgo"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 var (
@@ -26,6 +27,7 @@ type StreamingSession struct {
 	paused     bool
 	framesSent int
 
+	stopped  bool
 	finished bool
 	running  bool
 	err      error // If an error occured and we had to stop
@@ -70,12 +72,15 @@ func (s *StreamingSession) stream() {
 			s.Unlock()
 			return
 		}
+		if s.stopped {
+			s.Unlock()
+			break
+		}
 		s.Unlock()
 
 		err := s.readNext()
 		if err != nil {
 			s.Lock()
-
 			s.finished = true
 			if err != io.EOF {
 				s.err = err
@@ -164,7 +169,6 @@ func (s *StreamingSession) Stop() {
 	s.Unlock()
 	return
 }
-
 
 // PlaybackPosition returns the the duration of content we have transmitted so far
 func (s *StreamingSession) PlaybackPosition() time.Duration {
