@@ -2,11 +2,10 @@ package dca
 
 import (
 	"errors"
+	"github.com/bwmarrin/discordgo"
 	"io"
 	"sync"
 	"time"
-
-	"github.com/andersfylling/disgord"
 )
 
 var (
@@ -22,12 +21,11 @@ type StreamingSession struct {
 	done chan error
 
 	source OpusReader
-	vc     disgord.VoiceConnection
+	vc     *discordgo.VoiceConnection
 
 	paused     bool
 	framesSent int
 
-	stopped  bool
 	finished bool
 	running  bool
 	err      error // If an error occured and we had to stop
@@ -37,7 +35,7 @@ type StreamingSession struct {
 // source   : The source of the opus frames to be sent, either from an encoder or decoder.
 // vc       : The voice connecion to stream to.
 // done     : If not nil, an error will be sent on it when completed.
-func NewStream(source OpusReader, vc disgord.VoiceConnection, done chan error) *StreamingSession {
+func NewStream(source OpusReader, vc *discordgo.VoiceConnection, done chan error) *StreamingSession {
 	session := &StreamingSession{
 		source: source,
 		vc:     vc,
@@ -72,15 +70,12 @@ func (s *StreamingSession) stream() {
 			s.Unlock()
 			return
 		}
-		if s.stopped {
-			s.Unlock()
-			break
-		}
 		s.Unlock()
 
 		err := s.readNext()
 		if err != nil {
 			s.Lock()
+
 			s.finished = true
 			if err != io.EOF {
 				s.err = err
@@ -111,8 +106,7 @@ func (s *StreamingSession) readNext() error {
 	select {
 	case <-timeOut:
 		return ErrVoiceConnClosed
-	default:
-		s.vc.SendOpusFrame(opus)
+	case s.vc.OpusSend <- opus:
 	}
 
 	s.Lock()
@@ -170,6 +164,7 @@ func (s *StreamingSession) Stop() {
 	s.Unlock()
 	return
 }
+
 
 // PlaybackPosition returns the the duration of content we have transmitted so far
 func (s *StreamingSession) PlaybackPosition() time.Duration {
