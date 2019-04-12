@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jonas747/ogg"
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jonas747/ogg"
 )
 
 // AudioApplication is an application profile for opus encoding
@@ -191,28 +192,11 @@ func (e *EncodeSession) run() {
 		e.options = StdEncodeOptions
 	}
 
-	vbrStr := "on"
-	if !e.options.VBR {
-		vbrStr = "off"
-	}
-
 	// Launch ffmpeg with a variety of different fruits and goodies mixed togheter
 	args := []string{
-		"-stats",
 		"-i", inFile,
-		"-map", "0:a",
 		"-acodec", "libopus",
 		"-f", "ogg",
-		"-vbr", vbrStr,
-		"-compression_level", strconv.Itoa(e.options.CompressionLevel),
-		"-vol", strconv.Itoa(e.options.Volume),
-		"-ar", strconv.Itoa(e.options.FrameRate),
-		"-ac", strconv.Itoa(e.options.Channels),
-		"-b:a", strconv.Itoa(e.options.Bitrate * 1000),
-		"-application", string(e.options.Application),
-		"-frame_duration", strconv.Itoa(e.options.FrameDuration),
-		"-packet_loss", strconv.Itoa(e.options.PacketLoss),
-		"-threads", strconv.Itoa(e.options.Threads),
 	}
 
 	if e.options.AudioFilter != "" {
